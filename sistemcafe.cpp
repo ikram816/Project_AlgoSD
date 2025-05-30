@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstdio>
 #include <cstring>
 using namespace std;
 
@@ -11,75 +10,100 @@ struct Menu {
 
 struct Pengunjung {
     char namaPengunjung[50];
-    char noHP[15];
+    char noMeja[15];
     Menu daftarMenu[50];
     int jumlahPesanan;
     float totalHarga;
 };
 
-void liatMenu() {
-    cout << "Silakan pilih menu favorit Anda!" << endl;
+struct NodePengunjung {
+    Pengunjung data;
+    NodePengunjung* next;
+    NodePengunjung* prev;
+};
+
+NodePengunjung* head = nullptr;
+NodePengunjung* tail = nullptr;
+
+// Tampilkan menu makanan dan minuman
+void liatmenu() {
+    cout << "Silakan pilih menu favorit Anda!\n";
     cout << "\nMenu Makanan:\n";
     cout << "1. Nasi Goreng - 10000\n";
     cout << "2. Ayam Geprek - 13000\n";
-    cout << "3. Bakmi Rebus - 15000\n";
+    cout << "3. Bakmi Goreng Afui - 15000\n";
     cout << "4. Roti Bakar - 8000\n";
     cout << "\nMenu Minuman:\n";
-    cout << "1. Kopi Susu - 5000\n";
+    cout << "1. Teh Es - 5000\n";
     cout << "2. Kopi Hitam - 4000\n";
-    cout << "3. Teh Tarik - 5000\n";
+    cout << "3. Kopi Susu - 5000\n";
     cout << "4. Es Jeruk - 6000\n";
 }
 
-Pengunjung* bacaSemuaData(int &count) {
-    FILE *file = fopen("pembayaran.dat", "rb");
+// Fungsi untuk mendapatkan harga otomatis berdasarkan nama menu
+float hargaotomatis(const char* namaMenu) {
+    if (strcmp(namaMenu, "Nasi Goreng") == 0) return 10000;
+    if (strcmp(namaMenu, "Ayam Geprek") == 0) return 13000;
+    if (strcmp(namaMenu, "Bakmi Goreng Afui") == 0) return 15000;
+    if (strcmp(namaMenu, "Roti Bakar") == 0) return 8000;
+    if (strcmp(namaMenu, "Teh Es") == 0) return 5000;
+    if (strcmp(namaMenu, "Kopi Hitam") == 0) return 4000;
+    if (strcmp(namaMenu, "Kopi Susu") == 0) return 5000;
+    if (strcmp(namaMenu, "Es Jeruk") == 0) return 6000;
+    return -1;
+}
+
+// Membaca semua data pembayaran dari file
+Pengunjung* bacasemuadata(int &count) {
+    FILE* file = fopen("pembayaran.dat", "rb");
     if (!file) {
         count = 0;
         return nullptr;
     }
-
     fseek(file, 0, SEEK_END);
     long ukuranFile = ftell(file);
     count = ukuranFile / sizeof(Pengunjung);
     rewind(file);
 
     Pengunjung* arr = new Pengunjung[count];
-
     fread(arr, sizeof(Pengunjung), count, file);
     fclose(file);
-
     return arr;
 }
 
-void simpanSemuaData(Pengunjung* arr, int count) {
+// Simpan semua data pembayaran ke file
+void simpansemuadata(Pengunjung* arr, int count) {
     FILE* file = fopen("pembayaran.dat", "wb");
     if (!file) {
         cout << "Gagal membuka file untuk menyimpan data.\n";
         return;
     }
-
     fwrite(arr, sizeof(Pengunjung), count, file);
     fclose(file);
 }
 
-void tulisDataBayar() {
+// Input data pembayaran baru dan simpan ke file
+void tulisdatabayar() {
     Pengunjung p;
     cout << "Masukkan Nama Pengunjung: ";
     cin.ignore();
     cin.getline(p.namaPengunjung, 50);
 
-    cout << "Masukkan No HP: ";
-    cin.getline(p.noHP, 15);
+    cout << "Masukkan No Meja: "; // Ganti label
+    cin.getline(p.noMeja, 15);
 
     cout << "Masukkan jumlah menu yang ingin dipesan: ";
     cin >> p.jumlahPesanan;
+    cin.ignore();
+
     if (p.jumlahPesanan <= 0 || p.jumlahPesanan > 50) {
         cout << "Jumlah pesanan tidak valid (1-50).\n";
+        cin.get();
         return;
     }
 
-    cout << "\nContoh pesanan:\n";
-    cout << "Nama Menu: Roti Bakar\nJumlah: 2\nHarga per item: 8000\n";
+    cout << "\nMasukkan nama menu sesuai daftar!\n";
+    cout << "Contoh: Nasi Goreng, Kopi Susu, Roti Bakar, dll.\n";
     cout << "=========================================\n";
 
     p.totalHarga = 0;
@@ -88,34 +112,40 @@ void tulisDataBayar() {
         cout << "Menu ke-" << i + 1 << endl;
 
         cout << "Nama Menu: ";
-        cin.ignore();
         cin.getline(p.daftarMenu[i].namaMenu, 50);
+
+        float harga = hargaotomatis(p.daftarMenu[i].namaMenu);
+        if (harga == -1) {
+            cout << "Menu tidak ditemukan. Silakan coba lagi.\n";
+            i--;
+            continue;
+        }
 
         cout << "Jumlah: ";
         cin >> p.daftarMenu[i].jumlahMenu;
+        cin.ignore();
+
         if (p.daftarMenu[i].jumlahMenu <= 0) {
             cout << "Jumlah tidak valid.\n";
             i--;
             continue;
         }
 
-        cout << "Harga per item: ";
-        cin >> p.daftarMenu[i].hargaPerItem;
-        if (p.daftarMenu[i].hargaPerItem <= 0) {
-            cout << "Harga tidak valid.\n";
-            i--;
-            continue;
-        }
+        p.daftarMenu[i].hargaPerItem = harga;
+        p.totalHarga += harga * p.daftarMenu[i].jumlahMenu;
 
-        p.totalHarga += p.daftarMenu[i].jumlahMenu * p.daftarMenu[i].hargaPerItem;
-        cout << endl;
+        cout << "Harga per item: " << harga << endl;
+        cout << "Subtotal: " << harga * p.daftarMenu[i].jumlahMenu << endl << endl;
     }
 
-    cout << "Total Harga: " << p.totalHarga << endl;
+    cout << "Total harga yang harus dibayar: " << p.totalHarga << endl;
+    cout << "Tekan ENTER untuk melanjutkan...";
+    cin.get();
 
-    FILE *file = fopen("pembayaran.dat", "ab");
+    FILE* file = fopen("pembayaran.dat", "ab");
     if (!file) {
         cout << "Gagal membuka file untuk menyimpan data.\n";
+        cin.get();
         return;
     }
 
@@ -123,11 +153,13 @@ void tulisDataBayar() {
     fclose(file);
 }
 
-void bacaDataBayar() {
+// Membaca dan menampilkan data pembayaran dari file
+void bacadatabayar() {
     int count = 0;
-    Pengunjung* arr = bacaSemuaData(count);
+    Pengunjung* arr = bacasemuadata(count);
     if (count == 0) {
         cout << "Data pembayaran kosong atau file tidak ditemukan.\n";
+        cin.get();
         return;
     }
 
@@ -135,10 +167,10 @@ void bacaDataBayar() {
     cout << "---------------------------------------\n";
 
     for (int i = 0; i < count; i++) {
-        Pengunjung* p = &arr[i]; // pointer ke elemen
-        cout << "Transaksi #" << i+1 << endl;
+        Pengunjung* p = &arr[i];
+        cout << "Transaksi #" << i + 1 << endl;
         cout << "Nama: " << p->namaPengunjung << endl;
-        cout << "No HP: " << p->noHP << endl;
+        cout << "No Meja: " << p->noMeja << endl; // Ganti label
         cout << "Pesanan:\n";
 
         for (int j = 0; j < p->jumlahPesanan; j++) {
@@ -149,13 +181,15 @@ void bacaDataBayar() {
         cout << "Total Harga: " << p->totalHarga << endl;
         cout << "---------------------------------------\n";
     }
+    cout << "Tekan ENTER untuk kembali ke menu...";
+    cin.ignore();
+    cin.get();
 
     delete[] arr;
 }
 
-// === SEARCHING ====
-// Sequential Search berdasarkan nama pengunjung, kembalikan indeks atau -1
-int sequentialSearch(Pengunjung* arr, int count, const char* target) {
+// === Searching ===
+int sequentialsearch(Pengunjung* arr, int count, const char* target) {
     for (int i = 0; i < count; i++) {
         if (strcmp(arr[i].namaPengunjung, target) == 0) {
             return i;
@@ -164,7 +198,6 @@ int sequentialSearch(Pengunjung* arr, int count, const char* target) {
     return -1;
 }
 
-// Untuk Binary Search, data harus sorted dulu (ascending berdasarkan nama pengunjung)
 int binarySearch(Pengunjung* arr, int count, const char* target) {
     int low = 0, high = count - 1;
     while (low <= high) {
@@ -177,24 +210,24 @@ int binarySearch(Pengunjung* arr, int count, const char* target) {
     return -1;
 }
 
-// === SORTING ===
+// === Sorting ===
 // Bubble Sort berdasarkan nama pengunjung
 void bubbleSort(Pengunjung* arr, int count) {
-    for (int i = 0; i < count-1; i++) {
-        for (int j = 0; j < count-1-i; j++) {
-            if (strcmp(arr[j].namaPengunjung, arr[j+1].namaPengunjung) > 0) {
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = 0; j < count - 1 - i; j++) {
+            if (strcmp(arr[j].namaPengunjung, arr[j + 1].namaPengunjung) > 0) {
                 Pengunjung temp = arr[j];
-                arr[j] = arr[j+1];
-                arr[j+1] = temp;
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
             }
         }
     }
 }
 
 void selectionSort(Pengunjung* arr, int count) {
-    for (int i = 0; i < count-1; i++) {
+    for (int i = 0; i < count - 1; i++) {
         int minIdx = i;
-        for (int j = i+1; j < count; j++) {
+        for (int j = i + 1; j < count; j++) {
             if (strcmp(arr[j].namaPengunjung, arr[minIdx].namaPengunjung) < 0) {
                 minIdx = j;
             }
@@ -212,186 +245,71 @@ void insertionSort(Pengunjung* arr, int count) {
         Pengunjung key = arr[i];
         int j = i - 1;
         while (j >= 0 && strcmp(arr[j].namaPengunjung, key.namaPengunjung) > 0) {
-            arr[j+1] = arr[j];
+            arr[j + 1] = arr[j];
             j--;
         }
-        arr[j+1] = key;
-    }
-}
-
-void shellSort(Pengunjung* arr, int count) {
-    for (int gap = count/2; gap > 0; gap /= 2) {
-        for (int i = gap; i < count; i++) {
-            Pengunjung temp = arr[i];
-            int j;
-            for (j = i; j >= gap && strcmp(arr[j - gap].namaPengunjung, temp.namaPengunjung) > 0; j -= gap) {
-                arr[j] = arr[j - gap];
-            }
-            arr[j] = temp;
-        }
-    }
-}
-
-int partition(Pengunjung* arr, int low, int high) {
-    Pengunjung pivot = arr[high];
-    int i = low - 1;
-    for (int j = low; j < high; j++) {
-        if (strcmp(arr[j].namaPengunjung, pivot.namaPengunjung) <= 0) {
-            i++;
-            Pengunjung temp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = temp;
-        }
-    }
-    Pengunjung temp = arr[i+1];
-    arr[i+1] = arr[high];
-    arr[high] = temp;
-    return i+1;
-}
-
-void quickSort(Pengunjung* arr, int low, int high) {
-    if (low < high) {
-        int pi = partition(arr, low, high);
-        quickSort(arr, low, pi-1);
-        quickSort(arr, pi+1, high);
-    }
-}
-
-void merge(Pengunjung* arr, int left, int mid, int right) {
-    int n1 = mid - left + 1;
-    int n2 = right - mid;
-
-    Pengunjung* L = new Pengunjung[n1];
-    Pengunjung* R = new Pengunjung[n2];
-
-    for (int i = 0; i < n1; i++) L[i] = arr[left + i];
-    for (int j = 0; j < n2; j++) R[j] = arr[mid + 1 + j];
-
-    int i = 0, j = 0, k = left;
-    while (i < n1 && j < n2) {
-        if (strcmp(L[i].namaPengunjung, R[j].namaPengunjung) <= 0) {
-            arr[k++] = L[i++];
-        } else {
-            arr[k++] = R[j++];
-        }
-    }
-    while (i < n1) arr[k++] = L[i++];
-    while (j < n2) arr[k++] = R[j++];
-
-    delete[] L;
-    delete[] R;
-}
-
-void mergeSort(Pengunjung* arr, int left, int right) {
-    if (left < right) {
-        int mid = left + (right - left) / 2;
-        mergeSort(arr, left, mid);
-        mergeSort(arr, mid+1, right);
-        merge(arr, left, mid, right);
+        arr[j + 1] = key;
     }
 }
 
 void menuSorting(Pengunjung* arr, int count) {
-    if (count == 0) {
-        cout << "Data kosong, tidak bisa di-sort.\n";
-        return;
-    }
-    int pilihSort;
-    cout << "\nMenu Sorting:\n";
-    cout << "1. Bubble Sort\n";
-    cout << "2. Selection Sort\n";
-    cout << "3. Insertion Sort\n";
-    cout << "4. Shell Sort\n";
-    cout << "5. Quick Sort\n";
-    cout << "6. Merge Sort\n";
+    int pilih;
+    cout << "\n=== Menu Sorting ===\n";
+    cout << "1. Bubble Sort\n2. Selection Sort\n3. Insertion Sort\n";
     cout << "Pilih metode sorting: ";
-    cin >> pilihSort;
+    cin >> pilih;
 
-    switch (pilihSort) {
+    switch (pilih) {
         case 1:
             bubbleSort(arr, count);
-            cout << "Data telah diurutkan dengan Bubble Sort.\n";
+            cout << "Data sudah diurutkan menggunakan Bubble Sort.\n";
             break;
         case 2:
             selectionSort(arr, count);
-            cout << "Data telah diurutkan dengan Selection Sort.\n";
+            cout << "Data sudah diurutkan menggunakan Selection Sort.\n";
             break;
         case 3:
             insertionSort(arr, count);
-            cout << "Data telah diurutkan dengan Insertion Sort.\n";
-            break;
-        case 4:
-            shellSort(arr, count);
-            cout << "Data telah diurutkan dengan Shell Sort.\n";
-            break;
-        case 5:
-            quickSort(arr, 0, count-1);
-            cout << "Data telah diurutkan dengan Quick Sort.\n";
-            break;
-        case 6:
-            mergeSort(arr, 0, count-1);
-            cout << "Data telah diurutkan dengan Merge Sort.\n";
+            cout << "Data sudah diurutkan menggunakan Insertion Sort.\n";
             break;
         default:
-            cout << "Pilihan metode sorting tidak valid.\n";
+            cout << "Pilihan tidak valid.\n";
             return;
     }
 
-    cout << "Tekan Enter untuk melihat data yang sudah diurutkan...";
-    cin.ignore();
-    cin.get();
-
-    for (int i = 0; i < count; i++) {
-        cout << i+1 << ". " << arr[i].namaPengunjung << ", Total Harga: " << arr[i].totalHarga << endl;
-    }
-
-    cout << "Apakah Anda ingin menyimpan data yang sudah diurutkan ke file? (y/n): ";
-    char saveChoice;
-    cin >> saveChoice;
-    if (saveChoice == 'y' || saveChoice == 'Y') {
-        simpanSemuaData(arr, count);
-        cout << "Data berhasil disimpan.\n";
-    }
+    simpansemuadata(arr, count);
+    bacadatabayar();
 }
 
 void menuSearching(Pengunjung* arr, int count) {
-    if (count == 0) {
-        cout << "Data kosong, tidak bisa melakukan pencarian.\n";
+    int pilih;
+    cout << "\n=== Menu Searching ===\n";
+    cout << "1. Sequential Search\n2. Binary Search (Data harus sudah diurutkan)\n";
+    cout << "Pilih metode searching: ";
+    cin >> pilih;
+
+    cin.ignore(100, '\n');
+    char namaCari[50];
+    cout << "Masukkan nama pengunjung yang dicari: ";
+    cin.getline(namaCari, 50);
+
+    int idx = -1;
+    if (pilih == 1) {
+        idx = sequentialsearch(arr, count, namaCari);
+    } else if (pilih == 2) {
+        idx = binarySearch(arr, count, namaCari);
+    } else {
+        cout << "Pilihan tidak valid.\n";
         return;
     }
 
-    cout << "\nMenu Searching:\n";
-    cout << "1. Sequential Search\n";
-    cout << "2. Binary Search (Data harus sudah diurutkan)\n";
-    cout << "Pilih metode searching: ";
-    int pilihSearch;
-    cin >> pilihSearch;
-    cin.ignore();
-
-    char target[50];
-    cout << "Masukkan Nama Pengunjung yang dicari: ";
-    cin.getline(target, 50);
-
-    int idx = -1;
-    switch (pilihSearch) {
-        case 1:
-            idx = sequentialSearch(arr, count, target);
-            break;
-        case 2:
-            idx = binarySearch(arr, count, target);
-            break;
-        default:
-            cout << "Pilihan metode searching tidak valid.\n";
-            return;
-    }
-
     if (idx == -1) {
-        cout << "Data dengan nama tersebut tidak ditemukan.\n";
+        cout << "Data tidak ditemukan.\n";
     } else {
-        cout << "Data ditemukan pada indeks ke-" << idx+1 << ":\n";
+        cout << "Data ditemukan pada indeks ke-" << idx << ":\n";
         Pengunjung* p = &arr[idx];
         cout << "Nama: " << p->namaPengunjung << endl;
-        cout << "No HP: " << p->noHP << endl;
+        cout << "No Meja: " << p->noMeja << endl;
         cout << "Pesanan:\n";
         for (int i = 0; i < p->jumlahPesanan; i++) {
             cout << " - " << p->daftarMenu[i].namaMenu
@@ -400,6 +318,145 @@ void menuSearching(Pengunjung* arr, int count) {
         }
         cout << "Total Harga: " << p->totalHarga << endl;
     }
+
+    cin.ignore(); // tunggu user tekan Enter sebelum kembali ke menu
+    cin.get();
+}
+
+// === Linked List Pengunjung ===
+
+void tambahPengunjung() {
+    Pengunjung p;
+    cout << "Masukkan Nama Pengunjung: ";
+    cin.ignore();
+    cin.getline(p.namaPengunjung, 50);
+
+    cout << "Masukkan No Meja: "; // Ganti label
+    cin.getline(p.noMeja, 15);
+
+    cout << "Masukkan jumlah menu yang ingin dipesan: ";
+    cin >> p.jumlahPesanan;
+    cin.ignore();
+
+    if (p.jumlahPesanan <= 0 || p.jumlahPesanan > 50) {
+        cout << "Jumlah pesanan tidak valid (1-50).\n";
+        cin.get();
+        return;
+    }
+
+    cout << "\nMasukkan nama menu sesuai daftar!\n";
+    cout << "Contoh: Nasi Goreng, Kopi Susu, Roti Bakar, dll.\n";
+    cout << "=========================================\n";
+
+    p.totalHarga = 0;
+
+    for (int i = 0; i < p.jumlahPesanan; i++) {
+        cout << "Menu ke-" << i + 1 << endl;
+
+        cout << "Nama Menu: ";
+        cin.getline(p.daftarMenu[i].namaMenu, 50);
+
+        float harga = hargaotomatis(p.daftarMenu[i].namaMenu);
+        if (harga == -1) {
+            cout << "Menu tidak ditemukan. Silakan coba lagi.\n";
+            i--;
+            continue;
+        }
+
+        cout << "Jumlah: ";
+        cin >> p.daftarMenu[i].jumlahMenu;
+        cin.ignore();
+
+        if (p.daftarMenu[i].jumlahMenu <= 0) {
+            cout << "Jumlah tidak valid.\n";
+            i--;
+            continue;
+        }
+
+        p.daftarMenu[i].hargaPerItem = harga;
+        p.totalHarga += harga * p.daftarMenu[i].jumlahMenu;
+
+        cout << "Harga per item otomatis: " << harga << endl;
+        cout << "Subtotal: " << harga * p.daftarMenu[i].jumlahMenu << endl << endl;
+    }
+
+    NodePengunjung* newNode = new NodePengunjung;
+    newNode->data = p;
+    newNode->next = nullptr;
+    newNode->prev = tail;
+
+    if (tail != nullptr)
+        tail->next = newNode;
+    tail = newNode;
+
+    if (head == nullptr)
+        head = newNode;
+
+    cout << "Data pengunjung berhasil ditambahkan ke linked list.\n";
+    cout << "Tekan ENTER untuk melanjutkan...";
+    cin.get();
+}
+
+void tampilkanPengunjung() {
+    if (head == nullptr) {
+        cout << "Data pengunjung kosong.\n";
+        cin.ignore();
+        cin.get();
+        return;
+    }
+    cout << "\n=== Daftar Pengunjung ===\n";
+    NodePengunjung* cur = head;
+    int nomor = 1;
+    while (cur != nullptr) {
+        Pengunjung* p = &cur->data;
+        cout << "Pengunjung #" << nomor++ << endl;
+        cout << "Nama: " << p->namaPengunjung << endl;
+        cout << "No Meja: " << p->noMeja << endl; // Ganti label
+        cout << "Pesanan:\n";
+        for (int i = 0; i < p->jumlahPesanan; i++) {
+            cout << " - " << p->daftarMenu[i].namaMenu
+                 << ", Jumlah: " << p->daftarMenu[i].jumlahMenu
+                 << ", Harga per item: " << p->daftarMenu[i].hargaPerItem << endl;
+        }
+        cout << "Total Harga: " << p->totalHarga << endl;
+        cout << "--------------------------\n";
+        cur = cur->next;
+    }
+    cout << "Tekan ENTER untuk kembali ke menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void hapusPengunjung() {
+    if (head == nullptr) {
+        cout << "Data pengunjung kosong.\n";
+        return;
+    }
+    char namaHapus[50];
+    cout << "Masukkan nama pengunjung yang ingin dihapus: ";
+    cin.ignore();
+    cin.getline(namaHapus, 50);
+
+    NodePengunjung* cur = head;
+    while (cur != nullptr) {
+        if (strcmp(cur->data.namaPengunjung, namaHapus) == 0) {
+            if (cur->prev != nullptr)
+                cur->prev->next = cur->next;
+            else
+                head = cur->next;
+
+            if (cur->next != nullptr)
+                cur->next->prev = cur->prev;
+            else
+                tail = cur->prev;
+
+            delete cur;
+            cout << "Data pengunjung berhasil dihapus.\n";
+            return;
+        }
+        cur = cur->next;
+    }
+    cout << "Data pengunjung tidak ditemukan.\n";
 }
 
 int main() {
@@ -408,45 +465,112 @@ int main() {
 
     int pilihan;
     do {
-        cout << "\n====== Sistem Pemesanan Cafe ======\n";
-        cout << "1. Lihat Menu\n";
-        cout << "2. Tulis Data Pembayaran\n";
-        cout << "3. Baca Data Pembayaran\n";
-        cout << "4. Searching Data\n";
-        cout << "5. Sorting Data\n";
-        cout << "6. Keluar\n";
+        system("cls"); 
+        cout << "\n=============================================\n";
+        cout << "|      Sistem Pemesanan Cafe KopiKita      |\n";
+        cout << "=============================================\n";
+        cout << "| 1. Lihat Menu                            |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 2. Tulis Data Pembayaran                 |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 3. Baca Data Pembayaran                  |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 4. Searching Data                        |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 5. Sorting Data                          |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 6. Tambah Data ke Linked List            |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 7. Tampilkan Data Pengunjung             |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 8. Hapus Data Pengunjung                 |\n";
+        cout << "---------------------------------------------\n";
+        cout << "| 9. Keluar                                |\n";
+        cout << "=============================================\n";
         cout << "Pilihan Anda: ";
         cin >> pilihan;
 
         switch (pilihan) {
             case 1:
-                liatMenu();
+                system("cls");
+                liatmenu();
+                cout << "Tekan ENTER untuk kembali ke menu...";
+                cin.ignore();
+                cin.get();
                 break;
             case 2:
-                tulisDataBayar();
+                system("cls");
+                tulisdatabayar();
                 break;
             case 3:
-                bacaDataBayar();
+                system("cls");
+                bacadatabayar();
                 break;
             case 4:
-                if (dataArr) delete[] dataArr; 
-                dataArr = bacaSemuaData(countData);
-                menuSearching(dataArr, countData);
+                system("cls");
+                if (dataArr != nullptr) {
+                    delete[] dataArr;
+                    dataArr = nullptr;
+                    countData = 0;
+                }
+                dataArr = bacasemuadata(countData);
+                if (countData == 0) {
+                    cout << "Data kosong.\n";
+                    cin.ignore();
+                    cin.get();
+                } else {
+                    menuSearching(dataArr, countData);
+                }
                 break;
             case 5:
-                if (dataArr) delete[] dataArr; 
-                dataArr = bacaSemuaData(countData);
-                menuSorting(dataArr, countData);
+                system("cls");
+                if (dataArr != nullptr) {
+                    delete[] dataArr;
+                    dataArr = nullptr;
+                    countData = 0;
+                }
+                dataArr = bacasemuadata(countData);
+                if (countData == 0) {
+                    cout << "Data kosong.\n";
+                    cin.ignore();
+                    cin.get();
+                } else {
+                    menuSorting(dataArr, countData);
+                }
                 break;
             case 6:
-                cout << "Terima kasih telah menggunakan sistem pemesanan cafe.\n";
+                system("cls");
+                tambahPengunjung();
+                break;
+            case 7:
+                system("cls");
+                tampilkanPengunjung();
+                break;
+            case 8:
+                system("cls");
+                hapusPengunjung();
+                cout << "Tekan ENTER untuk kembali ke menu...";
+                cin.get();
+                break;
+            case 9:
+                cout << "Terima kasih telah menggunakan program ini.\n";
                 break;
             default:
-                cout << "Pilihan tidak valid.\n";
-                break;
+                cout << "Pilihan tidak valid, silakan coba lagi.\n";
+                cin.ignore();
+                cin.get();
         }
-    } while (pilihan != 6);
+    } while (pilihan != 9);
 
-    if (dataArr) delete[] dataArr;
+    if (dataArr != nullptr) {
+        delete[] dataArr;
+    }
+    // Bersihkan linked list sebelum keluar program
+    while (head != nullptr) {
+        NodePengunjung* temp = head;
+        head = head->next;
+        delete temp;
+    }
+
     return 0;
 }
